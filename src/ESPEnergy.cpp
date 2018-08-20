@@ -1,24 +1,18 @@
 #include "ESPEnergy.h"
-//#define DEBUGMIO
+#define DEBUGMIO
 void setup()
 {
-	#ifdef DEBUGMIO
+	#if defined DEBUGMIO
 	Serial.begin(9600);
-  delay(5000);
+  delay(1000);
 	#endif
 
 	DEBUG_PRINT("Booting!");
-	//APPENA ACCESO CONTROLLA LA CONNESSIONE WiFi
-	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
-	if(check==0){
-		DEBUG_PRINT("NO LAN -> chiudo");
-		delay(500);
-		shutDownNow();
-		//FINE PROGRAMMA
+	DEBUG_PRINT("lunghezza " + String(sizeof(myener)));
+	Wire.begin(default_sda_pin, default_scl_pin);
+
 	}
-
-
-}
+// called by interrupt service routine when incoming data arrives
 void smartDelay(unsigned long ms){
   unsigned long start = millis();
   do
@@ -30,37 +24,37 @@ void smartDelay(unsigned long ms){
 void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
 }
-void shutDownNow(){
-	for (byte i = 0; i < 5; i++) {
-		DEBUG_PRINT("spegniti");
-	  delay(500);
-		Wire.begin(default_sda_pin, default_scl_pin);
-		delay(500);
-		Wire.beginTransmission (2);
-	  Wire.write (20);
-	  Wire.endTransmission(true);
-	}
-
-}
 void loop(){
-
-		Wire.begin(default_sda_pin, default_scl_pin);
-	  Wire.requestFrom (SLAVE_ADDRESS, sizeof(ener));
-		I2C_readAnything (ener);
+	DEBUG_PRINT("verifico connessione...");
+	if(WiFi.status() != WL_CONNECTED)  {
+		uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
+		if(check==0){
+			DEBUG_PRINT("NO LAN -> chiudo");
+			delay(50000);
+			return;
+			//FINE PROGRAMMA
+		}
+	}
+	DEBUG_PRINT("ok connesso.");
+	uint8_t check = prendi_dati();
+	DEBUG_PRINT("esito lettura " + String(check));
+	if(check==0){
 		reconnect();
 		printMqtt();
-		smartDelay(3000);
+	}
+
+	delay(5000);
 }
 //MQTT//////////////////////////////////////////////////////////////
 void printMqtt(){
 	StaticJsonBuffer<300> JSONbuffer;
 	JsonObject& JSONencoder = JSONbuffer.createObject();
 	JSONencoder["topic"] = "Energy";
-	JSONencoder["realPower"] = ener.realPower;
-	JSONencoder["apparentPower"] = ener.apparentPower;
-	JSONencoder["Irms"] = ener.Irms;
-	JSONencoder["supplyVoltage"] = ener.supplyVoltage;
-	JSONencoder["powerFactor"] = ener.powerFactor;
+	JSONencoder["realPower"] = myener.realPower;
+	JSONencoder["apparentPower"] = myener.apparentPower;
+	JSONencoder["Irms"] = myener.Irms;
+	JSONencoder["supplyVoltage"] = myener.supplyVoltage;
+	JSONencoder["powerFactor"] = myener.powerFactor;
 	char JSONmessageBuffer[100];
 	JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
 	client.publish(sensorsTopic, JSONmessageBuffer,true);
@@ -72,7 +66,7 @@ void reconnect() {
 		DEBUG_PRINT("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect(nodeID,mqttUser,mqttPass)) {
-      DEBUG_PRINT("MQTT connected");
+      //DEBUG_PRINT("MQTT connected");
 			// Once connected, publish an announcement...
       client.publish(logTopic, "ESP-01 Energy connesso");
 			break;
@@ -115,3 +109,13 @@ void reconnect() {
 			}
 		}
 	}
+uint8_t prendi_dati(){
+DEBUG_PRINT("richiedo dati...");
+	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
+	delay(1);
+	if(Wire.available())
+	{
+	I2C_readAnything(myener);
+	}
+	DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+}
