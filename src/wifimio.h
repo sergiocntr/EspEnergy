@@ -1,7 +1,6 @@
 #ifndef wifimio_h
 #define wifimio_h
 #include <ESP8266WiFi.h>
-#include "cxonfig.h"
 #include "debugutils.h"
 uint8_t connLAN(){
   if(WiFi.status() == WL_CONNECTED) return 1;

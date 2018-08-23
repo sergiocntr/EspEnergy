@@ -41,9 +41,34 @@ void loop(){
 	if(check==0){
 		reconnect();
 		printMqtt();
+		sendWeb();
 	}
 
 	delay(5000);
+}
+void sendWeb(){
+	String s ="volt=" + String(myener.supplyVoltage) +
+	+"&pwd=" + webpass +
+	+"&ampere=" + String(myener.Irms) +
+	+"&power=" + String(myener.realPower);
+	http.begin(post_server);
+	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+	int httpResponseCode = http.POST(s);
+	if(httpResponseCode>0){
+
+		String response = http.getString();                       //Get the response to the request
+
+		DEBUG_PRINT(httpResponseCode);   //Print return code
+		DEBUG_PRINT(response);           //Print request answer
+
+	 }else{
+
+		DEBUG_PRINT("Error on sending POST: ");
+		DEBUG_PRINT(httpResponseCode);
+
+	 }
+	http.end();  //Free resources
+	//return true;
 }
 //MQTT//////////////////////////////////////////////////////////////
 void printMqtt(){
