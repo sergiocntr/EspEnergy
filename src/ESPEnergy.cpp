@@ -10,6 +10,7 @@ void setup()
 	DEBUG_PRINT("Booting!");
 	DEBUG_PRINT("lunghezza " + String(sizeof(myener)));
 	Wire.begin(default_sda_pin, default_scl_pin);
+	Wire.begin(masterAdd);
 
 	}
 // called by interrupt service routine when incoming data arrives
@@ -38,7 +39,7 @@ void loop(){
 	DEBUG_PRINT("ok connesso.");
 	uint8_t check = prendi_dati();
 	DEBUG_PRINT("esito lettura " + String(check));
-	if(check==0){
+	if(check==6){
 		reconnect();
 		printMqtt();
 		sendWeb();
@@ -50,7 +51,7 @@ void sendWeb(){
 	String s ="volt=" + String(myener.supplyVoltage) +
 	+"&pwd=" + webpass +
 	+"&ampere=" + String(myener.Irms) +
-	+"&power=" + String(myener.realPower);
+	+"&power=" + String(mypow);
 	http.begin(post_server);
 	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 	int httpResponseCode = http.POST(s);
@@ -75,8 +76,8 @@ void printMqtt(){
 	StaticJsonBuffer<300> JSONbuffer;
 	JsonObject& JSONencoder = JSONbuffer.createObject();
 	JSONencoder["topic"] = "Energy";
-	JSONencoder["realPower"] = myener.realPower;
-	JSONencoder["apparentPower"] = myener.apparentPower;
+	JSONencoder["realPower"] = mypow;
+	//JSONencoder["apparentPower"] = myener.apparentPower;
 	JSONencoder["Irms"] = myener.Irms;
 	JSONencoder["supplyVoltage"] = myener.supplyVoltage;
 	JSONencoder["powerFactor"] = myener.powerFactor;
@@ -135,12 +136,13 @@ void reconnect() {
 		}
 	}
 uint8_t prendi_dati(){
-DEBUG_PRINT("richiedo dati...");
+	DEBUG_PRINT("richiedo dati...");
 	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
 	delay(1);
-	if(Wire.available())
-	{
-	I2C_readAnything(myener);
-	}
-	DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+	uint8_t i=I2C_readAnything(myener);
+	//mypow = myener.supplyVoltage * myener.Irms;
+	//DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+	return i;
+
+	//return 1;
 }

@@ -1,7 +1,7 @@
 #ifndef espmeteo_h
 #define espmeteo_h
 #define DEBUGMIO
-#include "Energyconfig.h"
+#include "EnergyMUXconfig.h"
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
@@ -14,6 +14,7 @@
 HTTPClient http;
 WiFiClient c;
 PubSubClient client(mqtt_server, mqtt_port, c);
+uint32_t mypow;
 void setup();
 void loop();
 //WIFI
