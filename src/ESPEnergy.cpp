@@ -6,13 +6,11 @@ void setup()
 	Serial.begin(9600);
   delay(1000);
 	#endif
-
+	delay(3000);
 	DEBUG_PRINT("Booting!");
 	DEBUG_PRINT("lunghezza " + String(sizeof(myener)));
 	Wire.begin(default_sda_pin, default_scl_pin);
-	Wire.begin(masterAdd);
-
-	}
+}
 // called by interrupt service routine when incoming data arrives
 void smartDelay(unsigned long ms){
   unsigned long start = millis();
@@ -26,26 +24,33 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
 }
 void loop(){
+	for (uint16_t i = 0; i < 50; i++) {
+		uint8_t check = prendi_dati();
+		thisvolt+=myener.supplyVoltage;
+		thisamp+=myener.Irms;
+		smartDelay(5000);
+	}
+	thisvolt/=70;
+	thisamp/=70;
+	mypow=thisamp * thisvolt;
 	DEBUG_PRINT("verifico connessione...");
-	if(WiFi.status() != WL_CONNECTED)  {
-		uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
-		if(check==0){
-			DEBUG_PRINT("NO LAN -> chiudo");
-			delay(50000);
-			return;
-			//FINE PROGRAMMA
-		}
+	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
+	if(check==0){
+		DEBUG_PRINT("NO LAN -> chiudo");
+		delay(50000);
+		return;
 	}
 	DEBUG_PRINT("ok connesso.");
-	uint8_t check = prendi_dati();
 	DEBUG_PRINT("esito lettura " + String(check));
-	if(check==6){
-		reconnect();
-		printMqtt();
-		sendWeb();
-	}
+	reconnect();
+	printMqtt();
+	sendWeb();
+	client.disconnect();
+	WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
+	WiFi.forceSleepBegin();
+	smartDelay(10);
 
-	delay(5000);
+
 }
 void sendWeb(){
 	String s ="volt=" + String(myener.supplyVoltage) +
@@ -140,8 +145,10 @@ uint8_t prendi_dati(){
 	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
 	delay(1);
 	uint8_t i=I2C_readAnything(myener);
-	//mypow = myener.supplyVoltage * myener.Irms;
-	//DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+	mypow = myener.supplyVoltage * myener.Irms;
+	DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+	DEBUG_PRINT("amp " + String(myener.Irms));
+	DEBUG_PRINT("pfact " + String(myener.powerFactor));
 	return i;
 
 	//return 1;

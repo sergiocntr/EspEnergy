@@ -14,7 +14,8 @@
 HTTPClient http;
 WiFiClient c;
 PubSubClient client(mqtt_server, mqtt_port, c);
-uint32_t mypow;
+
+//uint16_t volt=0;
 void setup();
 void loop();
 //WIFI
