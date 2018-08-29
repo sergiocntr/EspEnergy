@@ -5,6 +5,7 @@
 uint8_t connLAN(){
   if(WiFi.status() == WL_CONNECTED) return 1;
   WiFi.mode(WIFI_STA);
+  WiFi.setOutputPower(10);
   WiFi.begin(ssid, password);
   WiFi.config(ip, gateway, subnet); // Set static IP (2,7s) or 8.6s with DHCP  + 2s on battery
   for (int i=0; i <= 8; i++){

@@ -1,15 +1,21 @@
 #include "ESPEnergy.h"
 #define DEBUGMIO
+char[] myvolt[100],myamp[100],mycosfact[100];
 void setup()
 {
 	#if defined DEBUGMIO
 	Serial.begin(9600);
   delay(1000);
 	#endif
-	delay(3000);
+	WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
+	WiFi.forceSleepBegin();
+	smartDelay(10);
+	delay(5000);
 	DEBUG_PRINT("Booting!");
 	DEBUG_PRINT("lunghezza " + String(sizeof(myener)));
 	Wire.begin(default_sda_pin, default_scl_pin);
+	prendi_dati();
+	smartDelay(1000);
 }
 // called by interrupt service routine when incoming data arrives
 void smartDelay(unsigned long ms){
@@ -24,15 +30,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
 }
 void loop(){
-	for (uint16_t i = 0; i < 50; i++) {
+
+	for (uint16_t i = 0; i < 10; i++) {
 		uint8_t check = prendi_dati();
-		thisvolt+=myener.supplyVoltage;
-		thisamp+=myener.Irms;
+		myvolt[i]=myener.supplyVoltage;
+		myamp[i]=myener.Irms;
+		mycosfact[i]=myener.powerFactor;
 		smartDelay(5000);
 	}
-	thisvolt/=70;
-	thisamp/=70;
-	mypow=thisamp * thisvolt;
+	//thisvolt/=50;
+	//thisamp/=50;
+	//mypow=thisamp * thisvolt;
 	DEBUG_PRINT("verifico connessione...");
 	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
 	if(check==0){
@@ -41,19 +49,16 @@ void loop(){
 		return;
 	}
 	DEBUG_PRINT("ok connesso.");
-	DEBUG_PRINT("esito lettura " + String(check));
-	reconnect();
-	printMqtt();
+	//reconnect();
+	//printMqtt();
 	sendWeb();
 	client.disconnect();
 	WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
 	WiFi.forceSleepBegin();
 	smartDelay(10);
-
-
 }
 void sendWeb(){
-	String s ="volt=" + String(myener.supplyVoltage) +
+	String s ="volt[]=" + String(myvolt) +
 	+"&pwd=" + webpass +
 	+"&ampere=" + String(myener.Irms) +
 	+"&power=" + String(mypow);
@@ -145,10 +150,11 @@ uint8_t prendi_dati(){
 	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
 	delay(1);
 	uint8_t i=I2C_readAnything(myener);
-	mypow = myener.supplyVoltage * myener.Irms;
+	//mypow = myener.supplyVoltage * myener.Irms;
 	DEBUG_PRINT("volt " + String(myener.supplyVoltage));
 	DEBUG_PRINT("amp " + String(myener.Irms));
 	DEBUG_PRINT("pfact " + String(myener.powerFactor));
+	DEBUG_PRINT("i " + String(i));
 	return i;
 
 	//return 1;
