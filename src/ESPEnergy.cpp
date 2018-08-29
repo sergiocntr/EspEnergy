@@ -1,6 +1,5 @@
 #include "ESPEnergy.h"
 #define DEBUGMIO
-char[] myvolt[100],myamp[100],mycosfact[100];
 void setup()
 {
 	#if defined DEBUGMIO
@@ -33,14 +32,14 @@ void loop(){
 
 	for (uint16_t i = 0; i < 10; i++) {
 		uint8_t check = prendi_dati();
-		myvolt[i]=myener.supplyVoltage;
-		myamp[i]=myener.Irms;
-		mycosfact[i]=myener.powerFactor;
+		thisvolt+=myener.supplyVoltage;
+		thisamp+=myener.Irms;
+		//mycosfact[i]=myener.powerFactor;
 		smartDelay(5000);
 	}
-	//thisvolt/=50;
-	//thisamp/=50;
-	//mypow=thisamp * thisvolt;
+	thisvolt/=50;
+	thisamp/=50;
+	mypow=thisamp * thisvolt;
 	DEBUG_PRINT("verifico connessione...");
 	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
 	if(check==0){
@@ -58,9 +57,9 @@ void loop(){
 	smartDelay(10);
 }
 void sendWeb(){
-	String s ="volt[]=" + String(myvolt) +
+	String s ="volt=" + String(thisvolt) +
 	+"&pwd=" + webpass +
-	+"&ampere=" + String(myener.Irms) +
+	+"&ampere=" + String(thisamp) +
 	+"&power=" + String(mypow);
 	http.begin(post_server);
 	http.addHeader("Content-Type", "application/x-www-form-urlencoded");
