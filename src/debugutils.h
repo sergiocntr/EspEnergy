@@ -4,7 +4,7 @@
 //#include <WProgram.h>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-//#define DEBUGMIO
+#define DEBUGMIO
   #if defined DEBUGMIO
   #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
   #define DEBUG_PRINT(str)    \

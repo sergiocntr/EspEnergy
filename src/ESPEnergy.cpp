@@ -1,7 +1,6 @@
 #include "ESPEnergy.h"
-//#define DEBUGMIO
-void setup()
-{
+#define DEBUGMIO
+void setup(){
 	#if defined DEBUGMIO
 	Serial.begin(9600);
   delay(1000);
@@ -16,20 +15,8 @@ void setup()
 	//prendi_dati();
 	//smartDelay(1000);
 }
-// called by interrupt service routine when incoming data arrives
-void smartDelay(unsigned long ms){
-  unsigned long start = millis();
-  do
-  {
-    client.loop();
-		delay(1);
-	} while (millis() - start < ms);
-}
-void callback(char* topic, byte* payload, unsigned int length) {
-  // handle message arrived
-}
 void loop(){
-	const size_t bufferSize = 3*JSON_ARRAY_SIZE(50) + JSON_OBJECT_SIZE(3);
+	const size_t bufferSize = 6*JSON_ARRAY_SIZE(20) + JSON_OBJECT_SIZE(6);
 	DynamicJsonBuffer jsonBuffer(bufferSize);
 
 	JsonObject& root = jsonBuffer.createObject();
@@ -37,16 +24,17 @@ void loop(){
 	JsonArray& volt = root.createNestedArray("volt");
 	JsonArray& amp = root.createNestedArray("amp");
 	JsonArray& cosfi = root.createNestedArray("cosfi");
+	JsonArray& aP = root.createNestedArray("aP");
+	JsonArray& rP = root.createNestedArray("rP");
 	for (uint16_t i = 0; i < 20; i++) {
 		uint8_t check = prendi_dati();
 		volt.add(myener.supplyVoltage);
 		amp.add(myener.Irms);
+		//aP.add(myener.apparentPower);
+		//rP.add(myener.realPower);
 		cosfi.add(myener.powerFactor);
 		smartDelay(5000);
 	}
-	//thisvolt/=50;
-	//thisamp/=50;
-	//mypow=thisamp * thisvolt;
 	DEBUG_PRINT("verifico connessione...");
 	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
 	if(check==0){
@@ -58,9 +46,9 @@ void loop(){
 	//reconnect();
 	//printMqtt();
 	root["sensorType"] = "Energy";
-	char JSONmessageBuffer[800];
+	char JSONmessageBuffer[1000];
 	root.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  //Serial.println(JSONmessageBuffer);
+  DEBUG_PRINT(JSONmessageBuffer);
 	delay(1);
 	sendWeb(JSONmessageBuffer);
 	//client.disconnect();
@@ -89,6 +77,26 @@ void sendWeb(char* pippo){
 	http.end();  //Free resources
 	//return true;
 }
+uint8_t prendi_dati(){
+	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
+	delay(1);
+	uint8_t i=I2C_readAnything(myener);
+	//mypow = myener.supplyVoltage * myener.Irms;
+	//DEBUG_PRINT("volt " + String(myener.supplyVoltage));
+	//DEBUG_PRINT("amp " + String(myener.Irms));
+	//DEBUG_PRINT("pfact " + String(myener.powerFactor));
+	//DEBUG_PRINT("i " + String(i));
+	return i;
+}
+void smartDelay(unsigned long ms){
+	unsigned long start = millis();
+	do
+	{
+		//client.loop();
+		delay(1);
+	} while (millis() - start < ms);
+}
+/*
 //MQTT//////////////////////////////////////////////////////////////
 void printMqtt(){
 	StaticJsonBuffer<300> JSONbuffer;
@@ -153,17 +161,8 @@ void reconnect() {
 			}
 		}
 	}
-uint8_t prendi_dati(){
-	//DEBUG_PRINT("richiedo dati...");
-	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
-	delay(1);
-	uint8_t i=I2C_readAnything(myener);
-	//mypow = myener.supplyVoltage * myener.Irms;
-	//DEBUG_PRINT("volt " + String(myener.supplyVoltage));
-	//DEBUG_PRINT("amp " + String(myener.Irms));
-	//DEBUG_PRINT("pfact " + String(myener.powerFactor));
-	//DEBUG_PRINT("i " + String(i));
-	return i;
 
-	//return 1;
-}
+	void callback(char* topic, byte* payload, unsigned int length) {
+	  // handle message arrived
+	}
+*/
