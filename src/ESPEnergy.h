@@ -26,5 +26,5 @@ void callback(char* topic, byte* payload, unsigned int length);
 void printMqtt();
 void reconnect();
 uint8_t prendi_dati();
-void sendWeb();
+void sendWeb(char* );
 #endif
