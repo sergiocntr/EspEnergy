@@ -12,11 +12,10 @@ void setup(){
 	DEBUG_PRINT("Booting!");
 	DEBUG_PRINT("lunghezza " + String(sizeof(myener)));
 	Wire.begin(default_sda_pin, default_scl_pin);
-	//prendi_dati();
-	//smartDelay(1000);
 }
 void loop(){
-	const size_t bufferSize = 6*JSON_ARRAY_SIZE(20) + JSON_OBJECT_SIZE(6);
+	uint8_t iteration = 40;
+	const size_t bufferSize = 3*JSON_ARRAY_SIZE(iteration) + JSON_OBJECT_SIZE(iteration);
 	DynamicJsonBuffer jsonBuffer(bufferSize);
 
 	JsonObject& root = jsonBuffer.createObject();
@@ -24,47 +23,54 @@ void loop(){
 	JsonArray& volt = root.createNestedArray("volt");
 	JsonArray& amp = root.createNestedArray("amp");
 	JsonArray& cosfi = root.createNestedArray("cosfi");
-	JsonArray& aP = root.createNestedArray("aP");
-	JsonArray& rP = root.createNestedArray("rP");
-	for (uint16_t i = 0; i < 20; i++) {
+	//JsonArray& aP = root.createNestedArray("aP");
+	//JsonArray& rP = root.createNestedArray("rP");
+	for (uint16_t i = 0; i < iteration; i++) {
 		uint8_t check = prendi_dati();
-		volt.add(myener.supplyVoltage);
-		amp.add(myener.Irms);
-		//aP.add(myener.apparentPower);
-		//rP.add(myener.realPower);
-		cosfi.add(myener.powerFactor);
+		mfCosfi.in(myener.powerFactor);
+		mfVolt.in(myener.supplyVoltage);
+		mfAmp.in(myener.Irms);
+		//
+		volt.add(mfVolt.out());
+		amp.add(mfAmp.out());
+		cosfi.add(mfCosfi.out());
+		DEBUG_PRINT(i);
 		smartDelay(5000);
 	}
 	DEBUG_PRINT("verifico connessione...");
 	uint8_t check = connLAN(); 		//check == 1 -> connected to local WIFI
 	if(check==0){
 		DEBUG_PRINT("NO LAN -> chiudo");
-		delay(50000);
-		return;
+		delay(900000);
+		ESP.restart();
 	}
 	DEBUG_PRINT("ok connesso.");
 	//reconnect();
 	//printMqtt();
 	root["sensorType"] = "Energy";
-	char JSONmessageBuffer[1000];
+	char JSONmessageBuffer[3000];
 	root.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
-  DEBUG_PRINT(JSONmessageBuffer);
-	delay(1);
+  DEBUG_PRINT(sizeof(JSONmessageBuffer));
+	DEBUG_PRINT(JSONmessageBuffer);
+	smartDelay(1);
+	ESP.wdtDisable();
 	sendWeb(JSONmessageBuffer);
+	ESP.wdtEnable(1000);
 	//client.disconnect();
+	WiFi.disconnect(true);
 	WiFi.mode(WIFI_OFF); //energy saving mode if local WIFI isn't connected
 	WiFi.forceSleepBegin();
 	smartDelay(10);
 }
-void sendWeb(char* pippo){
+void sendWeb(char* _JSONMessage){
 
 	http.begin(post_server);
 	http.addHeader("Content-Type", "application/json");
-	int httpResponseCode = http.POST(pippo);   //Send the request
+	int httpResponseCode = http.PUT(_JSONMessage);   //Send the request
+	smartDelay(1);
   if(httpResponseCode>0){
 
 		String response = http.getString();                       //Get the response to the request
-
 		DEBUG_PRINT(httpResponseCode);   //Print return code
 		DEBUG_PRINT(response);           //Print request answer
 
@@ -75,17 +81,12 @@ void sendWeb(char* pippo){
 
 	 }
 	http.end();  //Free resources
-	//return true;
+
 }
 uint8_t prendi_dati(){
 	Wire.requestFrom (SLAVE_ADDRESS, sizeof(myener));
-	delay(1);
+	smartDelay(1);
 	uint8_t i=I2C_readAnything(myener);
-	//mypow = myener.supplyVoltage * myener.Irms;
-	//DEBUG_PRINT("volt " + String(myener.supplyVoltage));
-	//DEBUG_PRINT("amp " + String(myener.Irms));
-	//DEBUG_PRINT("pfact " + String(myener.powerFactor));
-	//DEBUG_PRINT("i " + String(i));
 	return i;
 }
 void smartDelay(unsigned long ms){
